@@ -30,6 +30,7 @@ class FlexbeOnboard(object):
 
     def __init__(self):
         self.be = None
+        self._current_behavior = None
         Logger.initialize()
         self._tracked_imports = list()
         # hide SMACH transition log spamming
@@ -182,9 +183,13 @@ class FlexbeOnboard(object):
     def _prepare_behavior(self, msg):
         # get sourcecode from ros package
         try:
-            behavior = self._behavior_lib.get_behavior(msg.behavior_id)
-            if behavior is None:
-                raise ValueError(msg.behavior_id)
+            # use BehaviorSelection.BEHAVIOR_ID_CURRENT as id to update current behavior
+            if self._current_behavior is not None and msg.behavior_id == BehaviorSelection.BEHAVIOR_ID_CURRENT:
+                behavior = self._current_behavior
+            else:
+                behavior = self._behavior_lib.get_behavior(msg.behavior_id)
+                if behavior is None:
+                    raise ValueError(msg.behavior_id)
             be_filepath = self._behavior_lib.get_sourcecode_filepath(msg.behavior_id, add_tmp=True)
             if os.path.isfile(be_filepath):
                 be_file = open(be_filepath, "r")
@@ -201,6 +206,8 @@ class FlexbeOnboard(object):
             self._pub.publish(self.status_topic, BEStatus(behavior_id=msg.behavior_checksum, code=BEStatus.ERROR))
             return
 
+        self._current_behavior = behavior
+
         # apply modifications if any
         try:
             file_content = ""
@@ -209,7 +216,11 @@ class FlexbeOnboard(object):
                 file_content += be_content[last_index:mod.index_begin] + mod.new_content
                 last_index = mod.index_end
             file_content += be_content[last_index:]
-            if zlib.adler32(file_content) != msg.behavior_checksum:
+            checksum = zlib.adler32(file_content)
+            # make checksum check pass when updating current behavior
+            if msg.behavior_id == BehaviorSelection.BEHAVIOR_ID_CURRENT:
+                msg.behavior_checksum = checksum
+            if msg.behavior_checksum != checksum:
                 mismatch_msg = ("Checksum mismatch of behavior versions! \n"
                                 "Attempted to load behavior: %s\n"
                                 "Make sure that all computers are on the same version a.\n"
