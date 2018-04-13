@@ -12,6 +12,9 @@ import contextlib
 from ast import literal_eval as cast
 
 from flexbe_core import Logger, BehaviorLibrary
+from flexbe_core.reload_importer import ReloadImporter
+
+from flexbe_msgs.msg import BehaviorSelection, BEStatus, ContainerStructure, CommandFeedback
 from flexbe_core.proxy import ProxyPublisher, ProxySubscriberCached
 
 from flexbe_msgs.msg import BehaviorSelection, BEStatus, CommandFeedback
@@ -39,6 +42,16 @@ class FlexbeOnboard(object):
 
         # prepare manifest folder access
         self._behavior_lib = BehaviorLibrary()
+        
+        # enable automatic reloading of all subsequent modules on reload
+        reload_importer = ReloadImporter()
+        reload_importer.add_reload_path(self._tmp_folder)
+        for pkg in self._behavior_lib.behavior_packages:
+            reload_importer.add_reload_path(rp.get_path(pkg))
+        reload_importer.enable()
+
+        self._pub = ProxyPublisher()
+        self._sub = ProxySubscriberCached()
 
         # prepare communication
         self.status_topic = 'flexbe/status'
