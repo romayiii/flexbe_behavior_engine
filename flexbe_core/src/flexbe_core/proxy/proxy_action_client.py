@@ -137,6 +137,15 @@ class ProxyActionClient(object):
         """
         ProxyActionClient._feedback[topic] = None
 
+    def remove_feedback(self, topic):
+        """
+        Removes the latest feedback message of the given action call.
+
+        @type topic: string
+        @param topic: The topic of interest.
+        """
+        ProxyActionClient._feedback[topic] = None
+
     def get_state(self, topic):
         """
         Determines the current actionlib state of the given action topic.
