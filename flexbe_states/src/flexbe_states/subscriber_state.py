@@ -20,13 +20,14 @@ class SubscriberState(EventState):
     <= unavailable 				The topic is not available when this state becomes actives.
     '''
 
-    def __init__(self, topic, blocking=True, clear=False):
+    def __init__(self, topic, blocking=True, clear=False, latched=False):
         super(SubscriberState, self).__init__(outcomes=['received', 'unavailable'],
                                               output_keys=['message'])
         self._topic = topic
         self._blocking = blocking
         self._clear = clear
         self._connected = False
+        self._latched = latched
 
         if not self._connect():
             Logger.logwarn('Topic %s for state %s not yet available.\n'
@@ -39,7 +40,8 @@ class SubscriberState(EventState):
 
         if self._sub.has_msg(self._topic) or not self._blocking:
             userdata.message = self._sub.get_last_msg(self._topic)
-            self._sub.remove_last_msg(self._topic)
+            if not self._latched:
+                self._sub.remove_last_msg(self._topic)
             return 'received'
 
     def on_enter(self, userdata):
