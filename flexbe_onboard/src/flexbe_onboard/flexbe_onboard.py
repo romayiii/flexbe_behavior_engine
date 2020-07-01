@@ -15,7 +15,6 @@ from ast import literal_eval as cast
 from flexbe_core import Logger, BehaviorLibrary
 from flexbe_core.reload_importer import ReloadImporter
 
-from flexbe_msgs.msg import BehaviorSelection, BEStatus, ContainerStructure, CommandFeedback
 from flexbe_core.proxy import ProxyPublisher, ProxySubscriberCached
 
 from flexbe_msgs.msg import BehaviorSelection, BEStatus, CommandFeedback
