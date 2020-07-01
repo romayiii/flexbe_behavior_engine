@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import rospkg
 import os
 import sys
 import inspect
@@ -45,6 +46,7 @@ class FlexbeOnboard(object):
         self._behavior_lib = BehaviorLibrary()
         
         # enable automatic reloading of all subsequent modules on reload
+        rp = rospkg.RosPack()
         reload_importer = ReloadImporter()
         reload_importer.add_reload_path(self._tmp_folder)
         for pkg in self._behavior_lib.behavior_packages:
