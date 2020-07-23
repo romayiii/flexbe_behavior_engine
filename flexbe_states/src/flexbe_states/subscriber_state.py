@@ -38,11 +38,14 @@ class SubscriberState(EventState):
             userdata.message = None
             return 'unavailable'
 
-        if self._sub.has_msg(self._topic) or not self._blocking:
+        if self._sub.has_msg(self._topic):
             userdata.message = self._sub.get_last_msg(self._topic)
             if not self._latched:
                 self._sub.remove_last_msg(self._topic)
             return 'received'
+
+        if not self._blocking:
+            return 'unavailable'
 
     def on_enter(self, userdata):
         if not self._connected:
