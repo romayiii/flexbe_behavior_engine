@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rostopic
+import rospy
 from flexbe_core import EventState, Logger
 
 from flexbe_core.proxy import ProxySubscriberCached
@@ -13,6 +14,8 @@ class SubscriberState(EventState):
     -- blocking 	bool 		Blocks until a message is received.
     -- clear 		bool 		Drops last message on this topic on enter
                                 in order to only handle message received since this state is active.
+    -- latched` 	bool 		Drops last message if received.
+    -- timeout   	int 		Timeout in seconds if blocking, 0 for no timeout.
 
     #> message		object		Latest message on the given topic of the respective type.
 
@@ -20,7 +23,7 @@ class SubscriberState(EventState):
     <= unavailable 				The topic is not available when this state becomes actives.
     '''
 
-    def __init__(self, topic, blocking=True, clear=False, latched=False):
+    def __init__(self, topic, blocking=True, clear=False, latched=False, timeout=0):
         super(SubscriberState, self).__init__(outcomes=['received', 'unavailable'],
                                               output_keys=['message'])
         self._topic = topic
@@ -28,6 +31,8 @@ class SubscriberState(EventState):
         self._clear = clear
         self._connected = False
         self._latched = latched
+        self._timeout = timeout
+        self._start_time = rospy.get_rostime()
 
         if not self._connect():
             Logger.logwarn('Topic %s for state %s not yet available.\n'
@@ -46,6 +51,11 @@ class SubscriberState(EventState):
 
         if not self._blocking:
             return 'unavailable'
+        else:
+            if 0 < self._timeout < (rospy.get_rostime() - self._start_time).to_sec():
+                Logger.logwarn('No messages in Topic %s received, giving up after %s secs timeout.' %
+                               (self._topic, self._timeout))
+                return 'unavailable'
 
     def on_enter(self, userdata):
         if not self._connected:
@@ -56,6 +66,8 @@ class SubscriberState(EventState):
 
         if self._connected and self._clear and self._sub.has_msg(self._topic):
             self._sub.remove_last_msg(self._topic)
+
+        self._start_time = rospy.get_rostime()
 
     def _connect(self):
         msg_type, msg_topic, _ = rostopic.get_topic_class(self._topic)
